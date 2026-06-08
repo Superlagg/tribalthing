@@ -78,7 +78,8 @@
 
 /// Runs block and returns flag for do_run_block to process.
 /obj/item/proc/run_block(mob/living/owner, atom/object, damage, attack_text, attack_type, armour_penetration, mob/attacker, def_zone, final_block_chance, list/block_return)
-	. = SEND_SIGNAL(src, COMSIG_ITEM_RUN_BLOCK, owner, object, damage, attack_text, attack_type, armour_penetration, attacker, def_zone, final_block_chance, block_return)
+	. = pre_run_block(owner, object, damage, attack_text, attack_type, armour_penetration, attacker, def_zone, final_block_chance, block_return)
+	. |= SEND_SIGNAL(src, COMSIG_ITEM_RUN_BLOCK, owner, object, damage, attack_text, attack_type, armour_penetration, attacker, def_zone, final_block_chance, block_return)
 	if(. & BLOCK_SUCCESS)
 		return
 	if(prob(final_block_chance))
@@ -86,6 +87,24 @@
 			span_danger("You block [attack_text] with [src]!"))
 		return . | BLOCK_SUCCESS | BLOCK_PHYSICAL_EXTERNAL
 	return . | BLOCK_NONE
+
+/obj/item/proc/pre_run_block(mob/living/owner, atom/object, damage, attack_text, attack_type, armour_penetration, mob/attacker, def_zone, final_block_chance, list/block_return)
+	if(!check_faction(owner))
+		return
+	if(!reflectshot_chance)
+		return
+	// if(!wielded)
+	// 	return NONE
+	if(!owner.is_holding(src))
+		return
+	if(!prob(reflectshot_chance))
+		return
+	if(attack_type & ATTACK_TYPE_PROJECTILE)
+		owner.emote("spin")
+		block_return[BLOCK_RETURN_REDIRECT_METHOD] = REDIRECT_METHOD_RETURN_TO_SENDER //no you
+		return BLOCK_SHOULD_REDIRECT | BLOCK_SUCCESS | BLOCK_REDIRECTED
+	return
+
 
 /// Returns block information using list/block_return. Used for check_block() on mobs.
 /obj/item/proc/check_block(mob/living/owner, atom/object, damage, attack_text, attack_type, armour_penetration, mob/attacker, def_zone, final_block_chance, list/block_return)
